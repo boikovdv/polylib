@@ -44,8 +44,8 @@ export class TemplateInstance {
         let node = bind.node;
         if (!node) return;
         bind.f = (m) => this.applyBind(bind,m);
+        if (!bind.initiator) bind.initiator = {};
         bind.depend?.forEach(d => {
-            if (!bind.initiator) bind.initiator = {};
             bind.initiator[d] = this.addEffect(d, bind.f);
         })
         if (bind.twoSide) {
@@ -103,7 +103,10 @@ export class TemplateInstance {
      */
     addEffect(path, cb) {
         // find dataContext for property
-        let ctx = this.ctx.find( c => c.hasProp?.(path.split('.')[0]) );
+        const prop = path.split('.')[0];
+        const ctx = this.ctx.find((c) => {
+            return c.hasProp?.(prop);
+        });
         ctx?.addEffect(path, cb);
         return ctx;
     }
