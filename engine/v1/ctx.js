@@ -1,4 +1,7 @@
 import {getProp, isSubPath, normalizePath, stringPath} from "../../common.js";
+
+const WMH_MAX_VALUE = 2 ** 32;
+
 let wmh = 0;
 export const ContextMixin = s => class dataContext extends s {
     _em = {};
@@ -53,9 +56,10 @@ export const ContextMixin = s => class dataContext extends s {
      */
     notifyChange(m) {
         let path = normalizePath(m.path);
+        const textPath = path.join('.');
         m.wmh = m.wmh || getNextWM();
-        if (this.wmh[path.join('.')] >= m.wmh ) return;
-        this.wmh[path.join('.')] = m.wmh;
+        if (this.wmh[textPath] >= m.wmh && this.wmh[textPath] - m.wmh < WMH_MAX_VALUE / 2) return;
+        this.wmh[textPath] = m.wmh;
         if (m.value === m.oldValue && m.action === 'upd' && path.length === 1) return;
         this.applyEffects(m);
         let name = path[0];
@@ -65,10 +69,6 @@ export const ContextMixin = s => class dataContext extends s {
         }
         // Polymer-like notify for upward binds
         this.dispatchEvent(new CustomEvent(name + '-changed', { detail: m }));
-        // Таймаут нужен, чтобы дождаться выполнения всех кольцевых зависимостей
-        setTimeout(() => {
-            delete this.wmh[path.join('.')];
-        }, 0);
     }
     forwardNotify(mutation, from, to) {
         let r = new RegExp(`^(${from})(\..)?`);
@@ -103,5 +103,9 @@ export const ContextMixin = s => class dataContext extends s {
 }
 
 export function getNextWM() {
-    return wmh++;
+    wmh++;
+    if (wmh >= WMH_MAX_VALUE) {
+        wmh = 0;
+    }
+    return wmh;
 }
