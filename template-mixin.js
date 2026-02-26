@@ -1,4 +1,4 @@
-import {TemplateInstance} from "./index.js";
+import { TemplateInstance } from './index.js';
 
 const PlTemplateMixin = s => class plTplMixin extends s {
     /**
@@ -6,34 +6,40 @@ const PlTemplateMixin = s => class plTplMixin extends s {
      * @param {object} [config]
      * @param {boolean} [config.lightDom] - Использование LightDom вместо ShadowDom
      * @param {boolean} [config.delegatesFocus] - delegatesFocus flag for shadowRoot
+     * @param {boolean} [config.root] - alternate root for lightDom
      */
     constructor(config) {
         super(config);
-        this.root = config?.lightDom ? config?.root ?? this : this.attachShadow({ mode: 'open', delegatesFocus: config?.delegatesFocus });
+        this.root = config?.lightDom
+            ? config?.root ?? this
+            : this.attachShadow({ mode: 'open', delegatesFocus: config?.delegatesFocus });
     }
+
     connectedCallback() {
         super.connectedCallback();
-        let tpl = this.constructor.template;
+        const tpl = this.constructor.template;
         if (tpl) {
-            let inst = new TemplateInstance(tpl);
+            const inst = new TemplateInstance(tpl);
             this._ti = inst;
             inst.attach(this.root, undefined, this);
         }
         // append styles
         if (this.constructor.css) {
             if (this.constructor.css instanceof CSSStyleSheet) {
-                if (this.root.adoptedStyleSheets)
+                if (this.root.adoptedStyleSheets) {
                     this.root.adoptedStyleSheets = [...this.root.adoptedStyleSheets, this.constructor.css];
-                else
+                } else {
                     this.root.getRootNode().adoptedStyleSheets = [...this.root.getRootNode().adoptedStyleSheets, this.constructor.css];
+                }
             } else {
-                this.root.append(this.constructor.css.cloneNode(true))
+                this.root.append(this.constructor.css.cloneNode(true));
             }
         }
     }
+
     disconnectedCallback() {
         this._ti?.detach();
     }
-}
+};
 
-export {PlTemplateMixin};
+export { PlTemplateMixin };
