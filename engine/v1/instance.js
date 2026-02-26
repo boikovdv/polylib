@@ -47,9 +47,9 @@ export class TemplateInstance {
     attachBind(bind) {
         const node = bind.node;
         if (!node) return;
-        bind.f = (m) => this.applyBind(bind, m);
+        bind.f = m => this.applyBind(bind, m);
         if (!bind.initiator) bind.initiator = {};
-        bind.depend?.forEach(d => {
+        bind.depend?.forEach((d) => {
             bind.initiator[d] = this.addEffect(d, bind.f);
         });
         if (bind.twoSide) {

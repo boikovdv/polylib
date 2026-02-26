@@ -21,13 +21,15 @@ export class Template {
     afterStampHooks = [];
     constructor(tpl, opt) {
         this.svg = opt?.svg === true;
-        /** @type: HTMLTemplateElement */
+        /** @type HTMLTemplateElement */
         let node;
         if (tpl instanceof HTMLTemplateElement) {
             node = tpl;
         } else {
             node = document.createElement('template');
-            if (tpl instanceof Element) { node.content.replaceChildren(tpl); } else {
+            if (tpl instanceof Element) {
+                node.content.replaceChildren(tpl);
+            } else {
                 if (this.svg) {
                     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                     node.content.appendChild(svg);
@@ -89,7 +91,7 @@ export class Template {
     }
 
     stamp(context) {
-        console.log('stamp template, deprecated', this);
+        console.warn('stamp template, deprecated', this);
         const instance = new TemplateInstance(this);
         instance.attach(context.root);
         return instance;
@@ -104,7 +106,7 @@ export class Template {
         if (this.nestedTemplates.size > 0) {
             const nodeIterator = document.createNodeIterator(clone, NodeFilter.SHOW_COMMENT);
             let node;
-            while (node = nodeIterator.nextNode()) {
+            while ((node = nodeIterator.nextNode())) {
                 const id = (node.textContent.split(':')[1] || '').trim();
                 node._tpl = this.nestedTemplates.get(id);
             }
@@ -205,7 +207,7 @@ export function createBind(attrName, attrValue, path) {
 /**
  *  Find dependencies of expression.
  *  Expression can be:
- *      {{prop}} - two way bind
+ *      {{prop}} - two-way bind
  *      [[!prop]] - bind with negation
  *      [[function(prop,'constString')]] - function with arguments
  * @param expr
@@ -218,7 +220,7 @@ export function getDependence(expr) {
         if (prop[0] === '!') prop = prop.slice(1);
         const fm = prop.match(/(?<fname>[\w\d]+)\((?<args>.*)\)/);
         if (fm) {
-            return [fm.groups.fname, ...fm.groups.args?.split(',').map(i => i.trim())];
+            return [fm.groups.fname, ...fm.groups.args.split(',').map(i => i.trim())];
         } else {
             return [prop];
         }
@@ -231,10 +233,18 @@ function getPropApl(b) {
     return function prop(node, ctx, mutation, val) {
         if (node[b.name] === val) {
             if (typeof val === 'object' && mutation) {
-                if (b.depend.length === 1) { node.forwardNotify?.(mutation, b.depend[0], b.name); } else { node.notifyChange?.({ path: b.name, action: 'upd', wmh: mutation.wmh, value: val }); }
+                if (b.depend.length === 1) {
+                    node.forwardNotify?.(mutation, b.depend[0], b.name);
+                } else {
+                    node.notifyChange?.({ path: b.name, action: 'upd', wmh: mutation.wmh, value: val });
+                }
             }
         } else {
-            if (node.set) { node.set(b.name, val, mutation?.wmh); } else { node[b.name] = val; }
+            if (node.set) {
+                node.set(b.name, val, mutation?.wmh);
+            } else {
+                node[b.name] = val;
+            }
         }
     };
 }
@@ -258,7 +268,11 @@ function getEventApl(b) {
                 // поднимаемся наверх по всем вложенным контекстам, собираем полную модель
 
                 if (ctxModel.model) {
-                    if (ctxModel.as) { model[ctxModel.as] = ctxModel.model; } else { Object.assign(model, ctxModel.model); }
+                    if (ctxModel.as) {
+                        model[ctxModel.as] = ctxModel.model;
+                    } else {
+                        Object.assign(model, ctxModel.model);
+                    }
                     found = true;
                 }
             });
@@ -302,7 +316,7 @@ export function getBackApl(b) {
         b.funcBB = (event) => {
             // b.initiator[b.depend[0]] can be undefined when no property declared
             if (event.detail.wmh <= b.initiator[b.depend[0]]?.wmh[b.name] || event.detail.init) return;
-            if (typeof node[b.name] === 'object' && event.detail.value === event.detail.oldValue || normalizePath(event.detail.path).length > 1) {
+            if ((typeof node[b.name] === 'object' && event.detail.value === event.detail.oldValue) || normalizePath(event.detail.path).length > 1) {
                 b.initiator[b.depend[0]].forwardNotify?.(event.detail, b.name, b.depend[0]);
             } else {
                 b.initiator[b.depend[0]]?.set(b.depend[0], (node.ctx || node)[b.name], event.detail.wmh);
