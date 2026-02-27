@@ -43,6 +43,13 @@ export const ContextMixin = s => class dataContext extends s {
         this.notifyChange({ action: 'splice', path, target, index, deletedCount, addedCount: added?.length, added, deleted });
     }
 
+    assign(path, object) {
+        Object.entries(object)
+            .forEach(([property, value]) => {
+                this.set(path + '.' + property, value);
+            });
+    }
+
     /** @typedef {Object} DataMutation
      * @property {String} action
      * @property {String|Array} path - path to change relative to data host
@@ -61,7 +68,7 @@ export const ContextMixin = s => class dataContext extends s {
      * @param {DataMutation} m
      */
     notifyChange(m) {
-        let path = normalizePath(m.path);
+        const path = normalizePath(m.path);
         const textPath = path.join('.');
         m.wmh = m.wmh || getNextWM();
         if (this.wmh[textPath] >= m.wmh && this.wmh[textPath] - m.wmh < WMH_MAX_VALUE / 2) return;
