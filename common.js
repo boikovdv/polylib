@@ -104,3 +104,26 @@ export function getRandomId() {
 export function toDashed(string) {
     return string.replace(/([a-z\d])([A-Z-])/g, '$1-$2').toLowerCase();
 }
+
+export function getBindValue(bind) {
+    const dv = bind.depend.map((p) => {
+        if (/['"]/.test(p)) {
+            return p.replace(/["']/g, '');
+        } else {
+            return bind.initiator[p]?.get(p);
+        }
+    });
+
+    if (dv.length > 1) {
+        const [fn, ...args] = dv;
+        if (!fn) {
+            console.error('Function not found in context: %s(%s)', bind.depend[0], bind.depend.slice(1).join(','));
+            return;
+        }
+        // TODO: ctx for function
+        return fn.apply(bind.initiator[bind.depend[0]], args);
+    } else {
+        return dv[0];
+    }
+}
+

@@ -1,6 +1,8 @@
 import { TemplateInstance } from './index.js';
+import { getBindValue } from './common.js';
 
 const PlTemplateMixin = s => class plTplMixin extends s {
+    _observersBinds = [];
     /**
      * @constructor
      * @param {object} [config]
@@ -10,9 +12,28 @@ const PlTemplateMixin = s => class plTplMixin extends s {
      */
     constructor(config) {
         super(config);
+        // setup observers
+        if (this.constructor.observers?.length > 0) {
+            this.createObserversBinds();
+        }
         this.root = config?.lightDom
             ? config?.root ?? this
             : this.attachShadow({ mode: 'open', delegatesFocus: config?.delegatesFocus });
+    }
+
+    createObserversBinds() {
+        this.constructor.observers.forEach((observer) => {
+            const match = observer.match(/(?<fname>[\w\d]+)\((?<args>.*)\)/);
+            if (match) {
+                const args = match.groups.args.split(',').map(i => i.trim());
+                const depend = [match.groups.fname, ...args];
+                const bind = {
+                    type: 'observer',
+                    depend
+                };
+                this._observersBinds.push(bind);
+            }
+        });
     }
 
     connectedCallback() {
@@ -23,6 +44,12 @@ const PlTemplateMixin = s => class plTplMixin extends s {
             this._ti = inst;
             inst.attach(this.root, undefined, this);
         }
+
+        // attach observers effects
+        this._observersBinds.forEach((bind) => {
+            attachObserversBind(bind, [this]);
+        });
+
         // append styles
         if (this.constructor.css) {
             if (this.constructor.css instanceof CSSStyleSheet) {
@@ -41,5 +68,18 @@ const PlTemplateMixin = s => class plTplMixin extends s {
         this._ti?.detach();
     }
 };
+
+export function attachObserversBind(bind, contexts) {
+    bind.f = () => getBindValue(bind);
+    if (!bind.initiator) bind.initiator = {};
+
+    bind.depend?.forEach((d) => {
+        const ctx = contexts.find((c) => {
+            return c.hasProp?.(d);
+        });
+        bind.initiator[d] = ctx;
+        ctx.addEffect(d, bind.f);
+    });
+}
 
 export { PlTemplateMixin };

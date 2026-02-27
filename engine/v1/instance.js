@@ -1,4 +1,4 @@
-import { findByNPath } from '../../common.js';
+import { findByNPath, getBindValue } from '../../common.js';
 import { createBind, getBackApl } from './template.js';
 
 export class TemplateInstance {
@@ -60,7 +60,7 @@ export class TemplateInstance {
     applyBind(bind, m) {
         const node = bind.node;
         if (!node) return;
-        let val = this.getBindValue(bind);
+        let val = getBindValue(bind);
         val = bind.negate ? !val : val;
         bind.apl(node.ctx || node, this.ctx, m, val, bind.initiator[bind.depend[0]]);
     }
@@ -69,28 +69,6 @@ export class TemplateInstance {
         this.binds.forEach((bind) => {
             this.applyBind(bind);
         });
-    }
-
-    getBindValue(bind) {
-        const dv = bind.depend.map((p) => {
-            if (/['"]/.test(p)) {
-                return p.replace(/["']/g, '');
-            } else {
-                return bind.initiator[p]?.get(p);
-            }
-        });
-
-        if (dv.length > 1) {
-            const [fn, ...args] = dv;
-            if (!fn) {
-                console.error('Function not found in context: %s(%s)', bind.depend[0], bind.depend.slice(1).join(','));
-                return;
-            }
-            // TODO: ctx for function
-            return fn.apply(bind.initiator[bind.depend[0]], args);
-        } else {
-            return dv[0];
-        }
     }
 
     detach() {
